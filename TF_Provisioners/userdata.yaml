@@ -1,0 +1,7 @@
+#cloud-config
+#YAML file that sets up your VM instance with the wanted configuration and software ready to use
+packages:
+  - httpd
+runcmd:
+  - systemctl start httpd
+  - sudo systemctl enable httpd
