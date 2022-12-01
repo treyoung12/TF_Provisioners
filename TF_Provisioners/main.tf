@@ -1,11 +1,11 @@
 terraform {
-  cloud {
+  /*cloud {
     organization = "Terraform-tester"
 
     workspaces {
       name = "Provisioners"
     }
-  }
+  }*/
 
   required_providers {
     aws = {
@@ -76,19 +76,59 @@ resource "aws_instance" "my_server" {
 
   # user data script
   user_data = data.template_file.user_data.rendered
+  
+  # local exec provisioner, runs local command on bootup
+  /* provisioner "local-exec" {
+    command = "echo ${self.private_ip} >> private_ips.txt"
+  
+}
+
+# remote exec provisioner, runs remote command on bootup
+  provisioner "remote-exec" {
+    inline = [
+      "echo ${self.private_ip} >> /home/ec2-user/private_ips.txt"
+    ]
+  }*/
+    # connection block is required for remote exec
+    connection {
+      type     = "ssh"
+      user     = "ec2-user"
+      host     = "${self.public_ip}"
+      private_key = "${file("/home/ohhmy097/.ssh/terraform")}"
+  }
+
+# file provisioner block, copies the string in content into destination directory
+/*provisioner "file"{
+  content = "ami used: ${self.ami}"
+  destination = "/home/ec2-user/barsoon.txt"
+}*/
 
   tags = {
     Name = "MyServer"
   }
 }
+
+# null resource block, use case : does status checks on the server to see if it is fully initialized
+resource "null_resource" "status"{
+  provisioner "local-exec"{
+    command = "aws ec2 wait instance-status-ok --instance-ids ${aws_instance.my_server.id}"
+  }
+  depends_on = [
+    aws_instance.my_server
+  ]
+}
+
 resource "aws_key_pair" "deployer" {
   key_name   = "deployer-key"
   public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDBPgFrDlXZS55SuqrXU9KtaYd/9lCIKovlLTpmHEn/8z69LbOg3mXTY2RKYfexgqO7AxsBx1h9hpc7DjN49QfnXmruSf/hPQgiahExIJEIl3ilJZqTt4hi6PoY0YNdwF1aLGQui0MJI7p3J6J/UeB32VYQnH0tBeFU3JcZkmVeXYiP/CDkLikV5z4v6qlkhGjk+YSJiTOkiPbXf+0UULMpTowpMqngDGfoMDzduLoddCy9WJjxfpr3b0ed6LWjKW9nqr8/HnZEOUkVbgpQut1tECdF21Sxzamq3iShcTUFohSWhR1KLmxHWy7IyWeA0M2nP2cskLwSXZ1u3ou9Sjjkz9PF/N7Hf15R1JZmFkYruM/jKBU/98YkpL9UjutCmzS4o+64PD4w/d3NH2UQVnzKUZVzUIxqdEWnBvPQT72E57Jlv0Tz2VnVBwFxNF9kwOZJVsAyH9Smp8+VX1MbKQpveOIlxLQHW1uMSs/Yxbs/qhc4whxsgzc4pMvB8ki91cs= ohhmy097@DESKTOP-84F9R34"
 }
 
+
 data "template_file" "user_data"{
   template = file("./userdata.yaml")
 }
+
+
 
 #outputs public ip address of the spun up server
 output "public_ip"{
