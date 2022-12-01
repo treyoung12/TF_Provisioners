@@ -1,11 +1,11 @@
 terraform {
-  cloud {
+  /*cloud {
     organization = "Terraform-tester"
 
     workspaces {
       name = "Provisioners"
     }
-  }
+  }*/
 
   required_providers {
     aws = {
@@ -76,6 +76,12 @@ resource "aws_instance" "my_server" {
 
   # user data script
   user_data = data.template_file.user_data.rendered
+  
+  # local exec provisioner, runs local command on bootup
+  provisioner "local-exec" {
+    command = "echo ${self.private_ip} >> private_ips.txt"
+  
+}
 
   tags = {
     Name = "MyServer"
